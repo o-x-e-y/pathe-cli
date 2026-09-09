@@ -80,3 +80,11 @@ def catalogue():
     from pathe.catalogue import Catalogue
 
     return Catalogue(load("shows.json"))
+
+
+@pytest.fixture(autouse=True)
+def isolated_config(tmp_path, monkeypatch):
+    """No test may read the machine's real ~/.config/pathe/settings.json, and
+    no test may inherit a PATHE_CINEMAS from the shell that ran pytest."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.delenv("PATHE_CINEMAS", raising=False)

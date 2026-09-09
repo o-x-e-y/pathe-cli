@@ -75,3 +75,12 @@ def test_error_type_is_shared_between_api_and_errors():
     from pathe import api, errors
 
     assert api.PatheError is errors.PatheError
+
+
+def test_suite_does_not_read_the_real_home_config():
+    """The autouse fixture in conftest points XDG_CONFIG_HOME at a tmp dir, so
+    a settings.json on the developer's machine cannot change test outcomes."""
+    import os
+    from pathlib import Path
+
+    assert Path(os.environ["XDG_CONFIG_HOME"]) != Path.home() / ".config"
