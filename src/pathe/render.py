@@ -13,6 +13,11 @@ MONTHS = [
     "juli", "augustus", "september", "oktober", "november", "december",
 ]
 
+SHORT_MONTHS = [
+    "jan", "feb", "mrt", "apr", "mei", "jun",
+    "jul", "aug", "sep", "okt", "nov", "dec",
+]
+
 SEP = " · "
 NO_FORMAT = "—"  # a plain 2D digital screening
 
@@ -26,6 +31,52 @@ def dutch_date(iso):
     except (TypeError, ValueError):
         return iso
     return f"{DAYS[day.weekday()]} {day.day} {MONTHS[day.month - 1]} {day.year}"
+
+
+def short_date(iso):
+    """`2026-09-16` -> `wo 16 sep`. The long form is for a heading over one
+    day's screenings; a list of cinemas needs something that stays in a column.
+    """
+    try:
+        day = dt.date.fromisoformat(iso)
+    except (TypeError, ValueError):
+        return iso
+    return f"{DAYS[day.weekday()][:2]} {day.day} {SHORT_MONTHS[day.month - 1]}"
+
+
+def date_span(days):
+    """The run of a film at one cinema.
+
+    Prints the day count when the run has holes in it: a bare `wo 9 – di 15`
+    would claim eight days of screenings where there are five, and the gap is
+    exactly the thing you would plan around.
+    """
+    if not days:
+        return ""
+    first, last = days[0], days[-1]
+    if first == last:
+        return short_date(first)
+    out = f"{short_date(first)} – {short_date(last)}"
+    try:
+        width = (dt.date.fromisoformat(last) - dt.date.fromisoformat(first)).days + 1
+    except (TypeError, ValueError):
+        return out
+    if len(days) < width:
+        out += f" ({len(days)} dagen)"
+    return out
+
+
+def cinema_rows(entries):
+    """`[(slug, name, days), ...]` -> one block per cinema.
+
+    The slug gets its own line because it is what you paste into `-c`; the
+    names are padded so the spans line up down the block.
+    """
+    width = max((len(name) for _, name, _ in entries), default=0)
+    return [
+        f"  `{slug}`\n     {name.ljust(width)}  {date_span(days)}"
+        for slug, name, days in entries
+    ]
 
 
 def film_line(film, formats=(), version=""):
