@@ -126,3 +126,32 @@ def test_parse_screenings_is_time_sorted():
 def test_parse_screenings_handles_empty():
     assert parse_screenings([]) == []
     assert parse_screenings(None) == []
+
+
+def test_playing_dates_keeps_only_dates_in_the_window():
+    from pathe.catalogue import playing_dates
+
+    payload = {
+        "pathe-arnhem": {"days": {"2026-09-09": {}, "2026-09-10": {}, "2026-09-20": {}}},
+    }
+    assert playing_dates(payload, ["2026-09-09", "2026-09-10"]) == {
+        "pathe-arnhem": ["2026-09-09", "2026-09-10"]
+    }
+
+
+def test_playing_dates_drops_cinemas_with_nothing_in_the_window():
+    from pathe.catalogue import playing_dates
+
+    payload = {"pathe-arnhem": {"days": {"2026-09-20": {}}}}
+    assert playing_dates(payload, ["2026-09-09"]) == {}
+
+
+def test_playing_dates_sorts_and_survives_an_empty_payload():
+    from pathe.catalogue import playing_dates
+
+    payload = {"pathe-arnhem": {"days": {"2026-09-10": {}, "2026-09-09": {}}}}
+    assert playing_dates(payload, ["2026-09-09", "2026-09-10"])["pathe-arnhem"] == [
+        "2026-09-09",
+        "2026-09-10",
+    ]
+    assert playing_dates({}, ["2026-09-09"]) == {}

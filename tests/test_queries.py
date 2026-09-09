@@ -157,3 +157,88 @@ async def test_output_is_byte_identical_across_runs(client):
     a = await queries.programme(client, [CINEMA], SUNDAY)
     b = await queries.programme(type(client)(), [CINEMA], SUNDAY)
     assert a == b
+
+
+async def test_show_cinemas_is_one_request(client):
+    """The whole point of the endpoint: the field is one call, not 31."""
+    from pathe.api import PatheClient
+
+    assert hasattr(PatheClient, "show_cinemas")
+    payload = await client.show_cinemas("leviticus-53403")
+    assert set(payload) and client.calls == ["show_cinemas:leviticus-53403"]
+
+
+FOUR = [
+    "pathe-helmond",
+    "pathe-eindhoven",
+    "pathe-tilburg-centrum",
+    "pathe-tilburg-stappegoor",
+]
+WEEK = [f"2026-09-{d:02d}" for d in range(9, 17)]
+
+
+async def test_where_splits_mine_from_the_rest(client):
+    out = await queries.where(client, "leviticus", FOUR, WEEK)
+    assert out.startswith("# Leviticus — 9 van 31 bioscopen")
+    assert "## Jouw bioscopen" in out
+    assert "`pathe-tilburg-stappegoor`" in out.split("## Elders")[0]
+    assert "`pathe-arena`" in out.split("## Elders")[1]
+
+
+async def test_where_names_the_favourites_that_do_not_have_it(client):
+    """An empty first section would be ambiguous -- no cinemas, or no
+    favourites configured?"""
+    out = await queries.where(client, "leviticus", FOUR, WEEK)
+    mine = out.split("## Elders")[0]
+    assert "niet in: helmond, eindhoven, tilburg-centrum" in mine
+
+
+async def test_where_counts_the_others(client):
+    out = await queries.where(client, "leviticus", FOUR, WEEK)
+    assert "## Elders (8)" in out
+
+
+async def test_where_only_favourites_drops_the_rest(client):
+    out = await queries.where(client, "leviticus", FOUR, WEEK, only_favorites=True)
+    assert "## Jouw bioscopen" in out and "## Elders" not in out
+
+
+async def test_where_narrows_to_the_window(client):
+    out = await queries.where(client, "leviticus", FOUR, ["2026-09-09"])
+    assert "wo 9 sep" in out and "wo 16 sep" not in out
+
+
+async def test_where_fetches_no_showtimes(client):
+    """`where` answers where, not when. Pulling showtimes would put the
+    31-cinema cost straight back in."""
+    await queries.where(client, "leviticus", FOUR, WEEK)
+    assert client.showtime_calls == []
+
+
+async def test_where_on_an_unknown_title(client):
+    out = await queries.where(client, "zzzznietbestaand", FOUR, WEEK)
+    assert "Zoeken: “zzzznietbestaand”" in out
+
+
+async def test_where_when_the_title_plays_nowhere(client):
+    """Known title, no cinemas in the window -- say so, rather than printing
+    two empty sections."""
+    out = await queries.where(client, "leviticus", FOUR, ["2027-01-01"])
+    assert "draait nergens in dit venster" in out
+    assert "## Elders" not in out
+
+
+async def test_where_notes_other_title_matches(client):
+    """Same affordance `film` has: the catalogue title often differs from the
+    spoken one, so name the near misses."""
+    out = await queries.where(client, "the", FOUR, WEEK)
+    assert "ook gevonden:" in out
+
+
+async def test_where_keeps_the_cinema_list_tight(client):
+    """One block per section, not one per cinema: `render.section` puts a blank
+    line between blocks, and a list you scan should not be double-spaced."""
+    out = await queries.where(client, "leviticus", FOUR, WEEK)
+    elders = out.split("## Elders")[1]
+    assert "\n\n  `pathe-arena`" not in elders
+    assert "`pathe-arena`\n     Pathé Arena" in elders

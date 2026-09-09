@@ -53,6 +53,13 @@ class FakeClient:
         except FileNotFoundError:
             return {"days": {}, "shows": {}}
 
+    async def show_cinemas(self, slug):
+        self.calls.append(f"show_cinemas:{slug}")
+        try:
+            return load(f"show-cinemas/{slug}.json")
+        except FileNotFoundError:
+            return {}
+
     async def showtimes(self, show, cinema, date):
         self.calls.append(f"showtimes:{show}:{cinema}:{date}")
         try:
@@ -80,3 +87,11 @@ def catalogue():
     from pathe.catalogue import Catalogue
 
     return Catalogue(load("shows.json"))
+
+
+@pytest.fixture(autouse=True)
+def isolated_config(tmp_path, monkeypatch):
+    """No test may read the machine's real ~/.config/pathe/settings.json, and
+    no test may inherit a PATHE_CINEMAS from the shell that ran pytest."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.delenv("PATHE_CINEMAS", raising=False)

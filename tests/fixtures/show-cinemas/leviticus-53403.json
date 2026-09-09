@@ -1,0 +1,822 @@
+{
+    "pathe-arena": {
+        "days": {
+            "2026-09-09": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-10": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-11": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-12": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-13": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-14": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-15": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-16": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            }
+        },
+        "releasedAt": "2026-09-03"
+    },
+    "pathe-arnhem": {
+        "days": {
+            "2026-09-09": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-10": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-11": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-12": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-13": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-14": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-15": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-16": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            }
+        },
+        "releasedAt": "2026-09-03"
+    },
+    "pathe-zwolle": {
+        "days": {
+            "2026-09-09": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-10": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-12": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-14": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-15": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            }
+        },
+        "releasedAt": "2026-09-03"
+    },
+    "pathe-de-kuip": {
+        "days": {
+            "2026-09-09": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-10": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-11": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-12": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-13": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-14": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-15": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-16": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            }
+        },
+        "releasedAt": "2026-09-03"
+    },
+    "pathe-de-munt": {
+        "days": {
+            "2026-09-09": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-10": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-11": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-12": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-13": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-14": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-15": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-16": {
+                "tags": [
+                    "DEFAULT",
+                    "relaxseats"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            }
+        },
+        "releasedAt": "2026-09-03"
+    },
+    "pathe-schiedam": {
+        "days": {
+            "2026-09-09": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-10": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-11": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-12": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-13": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-14": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-15": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-16": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            }
+        },
+        "releasedAt": "2026-09-03"
+    },
+    "pathe-spuimarkt": {
+        "days": {
+            "2026-09-09": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-10": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-11": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-12": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-13": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-14": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-15": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-16": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            }
+        },
+        "releasedAt": "2026-09-03"
+    },
+    "pathe-amsterdam-noord": {
+        "days": {
+            "2026-09-09": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-10": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-11": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-12": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-13": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-14": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-15": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-16": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            }
+        },
+        "releasedAt": "2026-09-03"
+    },
+    "pathe-tilburg-stappegoor": {
+        "days": {
+            "2026-09-09": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-10": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-11": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-12": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-13": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-14": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-15": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            },
+            "2026-09-16": {
+                "tags": [
+                    "DEFAULT"
+                ],
+                "upsell": null,
+                "versions": [
+                    "ov"
+                ],
+                "specialShowtime": false,
+                "highlightedShowtime": null
+            }
+        },
+        "releasedAt": "2026-09-03"
+    }
+}

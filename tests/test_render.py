@@ -104,3 +104,50 @@ def test_cell_block_format_union_is_ordered():
 
     line = render.cell_block(Cell()).splitlines()[1]
     assert "4DX, 3D" in line
+
+
+def test_short_date():
+    from pathe import render
+
+    assert render.short_date("2026-09-16") == "wo 16 sep"
+    assert render.short_date("2026-03-01") == "zo 1 mrt"
+    assert render.short_date("nonsense") == "nonsense"
+
+
+def test_date_span_of_a_single_day():
+    from pathe import render
+
+    assert render.date_span(["2026-09-09"]) == "wo 9 sep"
+
+
+def test_date_span_of_a_full_run():
+    from pathe import render
+
+    days = [f"2026-09-{d:02d}" for d in range(9, 17)]
+    assert render.date_span(days) == "wo 9 sep – wo 16 sep"
+
+
+def test_date_span_counts_days_when_the_run_has_gaps():
+    """A bare span would claim Zwolle plays it every day between the ends; it
+    plays five of those seven."""
+    from pathe import render
+
+    days = ["2026-09-09", "2026-09-10", "2026-09-12", "2026-09-14", "2026-09-15"]
+    assert render.date_span(days) == "wo 9 sep – di 15 sep (5 dagen)"
+
+
+def test_cinema_rows_align_the_spans():
+    from pathe import render
+
+    rows = render.cinema_rows([
+        ("pathe-arena", "Pathé Arena", ["2026-09-09"]),
+        ("pathe-zwolle", "Pathé Zwolle Lang", ["2026-09-09"]),
+    ])
+    assert rows[0] == "  `pathe-arena`\n     Pathé Arena        wo 9 sep"
+    assert rows[1] == "  `pathe-zwolle`\n     Pathé Zwolle Lang  wo 9 sep"
+
+
+def test_cinema_rows_of_nothing():
+    from pathe import render
+
+    assert render.cinema_rows([]) == []

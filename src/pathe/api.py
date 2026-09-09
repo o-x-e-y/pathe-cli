@@ -10,6 +10,7 @@ import asyncio
 import httpx
 
 from .cache import CATALOGUE_TTL, SHOWTIMES_TTL, Cache
+from .errors import PatheError  # also re-exported: `from .api import PatheError` is used widely
 
 BASE = "https://www.pathe.nl/api"
 
@@ -27,10 +28,6 @@ HEADERS = {
 # requests; there is no published rate limit, so this stays well inside what a
 # browser would do on its own.
 MAX_CONCURRENCY = 6
-
-
-class PatheError(RuntimeError):
-    pass
 
 
 class PatheClient:
@@ -101,6 +98,18 @@ class PatheClient:
         the surviving cells cost a showtimes request.
         """
         return await self._get(f"/cinema/{cinema}/shows", CATALOGUE_TTL)
+
+    async def show_cinemas(self, slug):
+        """Which cinemas play `slug`, and on which dates.
+
+        The inverse of `cinema_matrix`: same cell shape -- tags, versions, the
+        lot -- but keyed by cinema instead of by title, and containing only the
+        cinemas that actually have it. One request answers "where does this
+        play", where asking each cinema in turn costs thirty-one.
+
+        An unknown slug returns `{}` with a 200, not a 404.
+        """
+        return await self._get(f"/show/{slug}/cinemas", CATALOGUE_TTL)
 
     async def showtimes(self, show, cinema, date):
         return await self._get(

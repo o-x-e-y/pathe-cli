@@ -44,5 +44,7 @@
       overlays.default = final: _prev: {
         pathe-cli = final.callPackage ./nix/package.nix { };
       };
+
+      homeManagerModules.default = ./nix/hm-module.nix;
     };
 }

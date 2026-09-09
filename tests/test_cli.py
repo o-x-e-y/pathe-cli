@@ -195,3 +195,27 @@ def test_days_flag_widens_the_window(fake, capsys):
     _, narrow = run(["arthouse", "-c", "helmond", "--days", "1", "--from", SUNDAY], capsys)
     _, wide = run(["arthouse", "-c", "helmond", "--days", "14", "--from", SUNDAY], capsys)
     assert len(wide) > len(narrow)
+
+
+def test_favorites_flag_parses_on_either_side():
+    """The SUPPRESS trap CLAUDE.md documents: a flag given before the
+    subcommand must survive the subparser's own parse."""
+    assert cli.parse_args(["-f", "where", "dune"]).favorites is True
+    assert cli.parse_args(["where", "dune", "-f"]).favorites is True
+    assert cli.parse_args(["where", "dune"]).favorites is False
+
+
+def test_where_takes_the_same_window_flags_as_film():
+    args = cli.parse_args(["where", "dune", "--days", "7", "--from", "2026-09-09"])
+    assert args.command == "where" and args.days == 7 and args.start == "2026-09-09"
+
+
+def test_cinemas_and_favorites_together_is_an_error(client):
+    import asyncio
+
+    from pathe.cli import _dispatch
+    from pathe.errors import PatheError
+
+    args = cli.parse_args(["-c", "helmond", "-f", "where", "dune"])
+    with pytest.raises(PatheError, match="niet allebei"):
+        asyncio.run(_dispatch(args, client))

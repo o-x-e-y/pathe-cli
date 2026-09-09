@@ -1,4 +1,4 @@
-"""The five operations, each returning finished Markdown.
+"""The seven operations, each returning finished Markdown.
 
 Kept separate from `cli` so the MCP adapter and the tests call exactly the same
 code paths the terminal does -- there is no second rendering path to drift.
@@ -6,7 +6,7 @@ code paths the terminal does -- there is no second rendering path to drift.
 
 from . import filters, render
 from . import tags as tagmod
-from .catalogue import Catalogue, cells, parse_screenings
+from .catalogue import Catalogue, cells, parse_screenings, playing_dates
 
 
 async def _catalogue(client):
@@ -25,6 +25,15 @@ async def _resolve(cells_by_cinema, client):
 
 def _cinema_names(cinemas_payload):
     return {c["slug"]: c["name"] for c in cinemas_payload}
+
+
+def _cinema_cities(cinemas_payload):
+    return {c["slug"]: c.get("citySlug") or "" for c in cinemas_payload}
+
+
+def _short(slug):
+    """`pathe-helmond` -> `helmond`. For prose, where the prefix is noise."""
+    return slug.removeprefix("pathe-")
 
 
 async def list_cinemas(client):
@@ -126,6 +135,65 @@ async def film_showtimes(client, query, cinemas, dates, *, include_dubs=True, in
     if other:
         alts = ", ".join(f"{f.title} (`{f.slug}`)" for f in other)
         note = (note + "  " if note else "") + f"ook gevonden: {alts}"
+    return header + "\n\n" + render.document(sections, note=note)
+
+
+
+async def where(client, query, mine, dates, *, only_favorites=False):
+    """Which cinemas play one title -- the field, not the times.
+
+    Costs one `show_cinemas` request plus the two catalogue ones, because the
+    endpoint is the cinema matrix seen from the film's side and already lists
+    only the cinemas that have it. Asking the same question through
+    `film_showtimes` means a matrix request per cinema and a showtimes fanout
+    on top, for an answer you were going to narrow anyway.
+
+    Deliberately fetches no showtimes: `where` is the step before `film`.
+    """
+    catalogue = await _catalogue(client)
+    hits = catalogue.search(query)
+    if not hits:
+        return render.document([render.section(f"Zoeken: “{query}”", [])])
+    film = hits[0]
+
+    playing = playing_dates(await client.show_cinemas(film.slug), dates)
+    cinemas_payload = await client.cinemas()
+    names = _cinema_names(cinemas_payload)
+    cities = _cinema_cities(cinemas_payload)
+
+    header = (
+        f"# {film.title} — {len(playing)} van {len(cinemas_payload)} bioscopen\n"
+        f"{render.film_line(film)}"
+    )
+    note = ""
+    other = hits[1:4]
+    if other:
+        note = "ook gevonden: " + ", ".join(f"{f.title} (`{f.slug}`)" for f in other)
+
+    if not playing:
+        body = "_draait nergens in dit venster._"
+        if note:
+            body += f"\n\n_{note}_"
+        return f"{header}\n\n{body}\n"
+
+    kept = [c for c in mine if c in playing]
+    missing = [c for c in mine if c not in playing]
+    rest = sorted(
+        (c for c in playing if c not in mine),
+        key=lambda c: (cities.get(c, ""), names.get(c, c)),
+    )
+
+    # One block per section rather than one per cinema: `render.section` puts a
+    # blank line between blocks, and a list you scan down should stay tight.
+    rows = render.cinema_rows([(c, names.get(c, c), playing[c]) for c in kept])
+    if missing:
+        rows.append("  niet in: " + ", ".join(_short(c) for c in missing))
+    sections = [render.section("Jouw bioscopen", ["\n".join(rows)] if rows else [])]
+    if not only_favorites:
+        others = render.cinema_rows([(c, names.get(c, c), playing[c]) for c in rest])
+        sections.append(
+            render.section(f"Elders ({len(rest)})", ["\n".join(others)] if others else [])
+        )
     return header + "\n\n" + render.document(sections, note=note)
 
 
