@@ -157,3 +157,12 @@ async def test_output_is_byte_identical_across_runs(client):
     a = await queries.programme(client, [CINEMA], SUNDAY)
     b = await queries.programme(type(client)(), [CINEMA], SUNDAY)
     assert a == b
+
+
+async def test_show_cinemas_is_one_request(client):
+    """The whole point of the endpoint: the field is one call, not 31."""
+    from pathe.api import PatheClient
+
+    assert hasattr(PatheClient, "show_cinemas")
+    payload = await client.show_cinemas("leviticus-53403")
+    assert set(payload) and client.calls == ["show_cinemas:leviticus-53403"]

@@ -53,6 +53,13 @@ class FakeClient:
         except FileNotFoundError:
             return {"days": {}, "shows": {}}
 
+    async def show_cinemas(self, slug):
+        self.calls.append(f"show_cinemas:{slug}")
+        try:
+            return load(f"show-cinemas/{slug}.json")
+        except FileNotFoundError:
+            return {}
+
     async def showtimes(self, show, cinema, date):
         self.calls.append(f"showtimes:{show}:{cinema}:{date}")
         try:

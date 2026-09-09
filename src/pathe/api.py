@@ -99,6 +99,18 @@ class PatheClient:
         """
         return await self._get(f"/cinema/{cinema}/shows", CATALOGUE_TTL)
 
+    async def show_cinemas(self, slug):
+        """Which cinemas play `slug`, and on which dates.
+
+        The inverse of `cinema_matrix`: same cell shape -- tags, versions, the
+        lot -- but keyed by cinema instead of by title, and containing only the
+        cinemas that actually have it. One request answers "where does this
+        play", where asking each cinema in turn costs thirty-one.
+
+        An unknown slug returns `{}` with a 200, not a 404.
+        """
+        return await self._get(f"/show/{slug}/cinemas", CATALOGUE_TTL)
+
     async def showtimes(self, show, cinema, date):
         return await self._get(
             f"/show/{show}/showtimes/{cinema}/{date}",
