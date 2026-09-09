@@ -10,7 +10,7 @@ import asyncio
 import httpx
 
 from .cache import CATALOGUE_TTL, SHOWTIMES_TTL, Cache
-from .errors import PatheError  # noqa: F401  (re-exported; imported as api.PatheError)
+from .errors import PatheError  # also re-exported: `from .api import PatheError` is used widely
 
 BASE = "https://www.pathe.nl/api"
 

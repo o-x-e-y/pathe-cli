@@ -33,7 +33,7 @@ def _cinema_cities(cinemas_payload):
 
 def _short(slug):
     """`pathe-helmond` -> `helmond`. For prose, where the prefix is noise."""
-    return slug[len("pathe-"):] if slug.startswith("pathe-") else slug
+    return slug.removeprefix("pathe-")
 
 
 async def list_cinemas(client):
