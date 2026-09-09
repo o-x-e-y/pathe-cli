@@ -152,6 +152,21 @@ def cells(matrix, cinema, catalogue, dates):
     return out
 
 
+def playing_dates(payload, dates):
+    """`{cinema: [date, ...]}` from `/show/{slug}/cinemas`, inside `dates`.
+
+    Cinemas with nothing in the window drop out entirely, so the caller can
+    take `len()` of the result as "how many cinemas have it".
+    """
+    wanted = set(dates)
+    out = {}
+    for cinema, node in (payload or {}).items():
+        days = sorted(d for d in (node.get("days") or {}) if d in wanted)
+        if days:
+            out[cinema] = days
+    return out
+
+
 def parse_screenings(payload):
     out = []
     for raw in payload or []:
