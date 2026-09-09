@@ -67,3 +67,11 @@ def test_duplicates_collapse():
 def test_blank_entries_ignored():
     got, unknown = config.resolve(["helmond", "", "  "], KNOWN)
     assert got == ["pathe-helmond"] and unknown == []
+
+
+def test_error_type_is_shared_between_api_and_errors():
+    """`config` raises PatheError without importing the HTTP client, so the
+    type has to live somewhere both modules can reach."""
+    from pathe import api, errors
+
+    assert api.PatheError is errors.PatheError

@@ -10,6 +10,7 @@ import asyncio
 import httpx
 
 from .cache import CATALOGUE_TTL, SHOWTIMES_TTL, Cache
+from .errors import PatheError  # noqa: F401  (re-exported; imported as api.PatheError)
 
 BASE = "https://www.pathe.nl/api"
 
@@ -27,10 +28,6 @@ HEADERS = {
 # requests; there is no published rate limit, so this stays well inside what a
 # browser would do on its own.
 MAX_CONCURRENCY = 6
-
-
-class PatheError(RuntimeError):
-    pass
 
 
 class PatheClient:
