@@ -183,16 +183,16 @@ async def where(client, query, mine, dates, *, only_favorites=False):
         key=lambda c: (cities.get(c, ""), names.get(c, c)),
     )
 
-    blocks = render.cinema_rows([(c, names.get(c, c), playing[c]) for c in kept])
+    # One block per section rather than one per cinema: `render.section` puts a
+    # blank line between blocks, and a list you scan down should stay tight.
+    rows = render.cinema_rows([(c, names.get(c, c), playing[c]) for c in kept])
     if missing:
-        blocks.append("niet in: " + ", ".join(_short(c) for c in missing))
-    sections = [render.section("Jouw bioscopen", blocks)]
+        rows.append("  niet in: " + ", ".join(_short(c) for c in missing))
+    sections = [render.section("Jouw bioscopen", ["\n".join(rows)] if rows else [])]
     if not only_favorites:
+        others = render.cinema_rows([(c, names.get(c, c), playing[c]) for c in rest])
         sections.append(
-            render.section(
-                f"Elders ({len(rest)})",
-                render.cinema_rows([(c, names.get(c, c), playing[c]) for c in rest]),
-            )
+            render.section(f"Elders ({len(rest)})", ["\n".join(others)] if others else [])
         )
     return header + "\n\n" + render.document(sections, note=note)
 

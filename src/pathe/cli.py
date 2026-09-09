@@ -28,7 +28,12 @@ from . import queries
 from .api import PatheClient, PatheError
 from .cache import Cache
 from .catalogue import date_range
-from .config import DEFAULT_HORIZON_DAYS, default_cinemas, resolve
+from .config import (
+    DEFAULT_HORIZON_DAYS,
+    default_cinemas,
+    resolve,
+)
+from .config import favorites as configured_favorites
 
 STRAND_ALIASES = {
     "arthouse": "in-the-picture",
@@ -116,6 +121,7 @@ voorbeelden
 # subparser overwrite a flag given before the subcommand.
 GLOBAL_DEFAULTS = {
     "cinemas": None,
+    "favorites": False,
     "no_cache": False,
     "clear_cache": False,
     "include_dubs": False,
@@ -136,6 +142,8 @@ def _global_flags():
     p = argparse.ArgumentParser(add_help=False)
     p.add_argument("--cinemas", "-c", default=argparse.SUPPRESS,
                    help="komma-gescheiden slugs (default: config)")
+    p.add_argument("--favorites", "-f", action="store_true", default=argparse.SUPPRESS,
+                   help="gebruik je favorieten uit settings.json")
     p.add_argument("--no-cache", action="store_true", default=argparse.SUPPRESS,
                    help="negeer de schijfcache")
     p.add_argument("--clear-cache", action="store_true", default=argparse.SUPPRESS,
@@ -171,6 +179,11 @@ def build_parser():
     p.add_argument("date", nargs="?", default="today", help="JJJJ-MM-DD, today, tomorrow, +N")
 
     p = add("film", "speeltijden van één film over een periode")
+    p.add_argument("query", help="titel (of deel daarvan)")
+    p.add_argument("--days", type=int, default=DEFAULT_HORIZON_DAYS)
+    p.add_argument("--from", dest="start", default="today")
+
+    p = add("where", "in welke bioscopen een film draait")
     p.add_argument("query", help="titel (of deel daarvan)")
     p.add_argument("--days", type=int, default=DEFAULT_HORIZON_DAYS)
     p.add_argument("--from", dest="start", default="today")
@@ -216,9 +229,14 @@ async def _dispatch(args, client):
     if command == "upcoming":
         return await queries.upcoming(client, args.limit, include_dubs=flags["include_dubs"])
 
-    requested = (
-        [s for s in args.cinemas.split(",")] if args.cinemas else default_cinemas()
-    )
+    if args.cinemas and args.favorites:
+        raise PatheError("kies `-c` of `-f`, niet allebei")
+    if args.favorites:
+        requested = configured_favorites()
+    elif args.cinemas:
+        requested = args.cinemas.split(",")
+    else:
+        requested = default_cinemas()
     known = [c["slug"] for c in await client.cinemas()]
     cinemas, unknown = resolve(requested, known)
     if unknown:
@@ -233,6 +251,12 @@ async def _dispatch(args, client):
     if command == "film":
         dates = date_range(args.days, dt.date.fromisoformat(_parse_date(args.start)))
         return await queries.film_showtimes(client, args.query, cinemas, dates)
+    if command == "where":
+        # `where` reuses the resolved set as its "Jouw bioscopen" list, so
+        # `-c breda,nijmegen` asks the same question about a different pair.
+        dates = date_range(args.days, dt.date.fromisoformat(_parse_date(args.start)))
+        return await queries.where(client, args.query, cinemas, dates,
+                                   only_favorites=args.favorites)
     if command in ("tagged", "arthouse", "pride", "classics"):
         tag = {
             "arthouse": "in-the-picture",

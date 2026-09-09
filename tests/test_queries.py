@@ -233,3 +233,12 @@ async def test_where_notes_other_title_matches(client):
     spoken one, so name the near misses."""
     out = await queries.where(client, "the", FOUR, WEEK)
     assert "ook gevonden:" in out
+
+
+async def test_where_keeps_the_cinema_list_tight(client):
+    """One block per section, not one per cinema: `render.section` puts a blank
+    line between blocks, and a list you scan should not be double-spaced."""
+    out = await queries.where(client, "leviticus", FOUR, WEEK)
+    elders = out.split("## Elders")[1]
+    assert "\n\n  `pathe-arena`" not in elders
+    assert "`pathe-arena`\n     Pathé Arena" in elders
