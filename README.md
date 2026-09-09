@@ -21,7 +21,8 @@ $ pathe arthouse -c helmond --days 21
 | command | |
 |---|---|
 | `pathe programme [date]` | the day's programme |
-| `pathe film <titel>` | where and when one film plays |
+| `pathe film <titel>` | when and at what times one film plays |
+| `pathe where <titel>` | which cinemas play it at all — one request |
 | `pathe arthouse` | the In the Picture strand (zo/ma, ~19:00, wisselt per twee weken) |
 | `pathe pride` | Pride Night (woensdag, ~maandelijks) |
 | `pathe classics` | heruitgaves — they play briefly, so they get their own list |
@@ -33,6 +34,14 @@ $ pathe arthouse -c helmond --days 21
 `pathe --help` documents the strands, the filters and the date syntax in full.
 
 ## Notes
+
+Favourite cinemas come from `~/.config/pathe/settings.json`:
+
+    { "favorites": ["helmond", "tilburg-stappegoor"] }
+
+They are what `-c` overrides and what `-f` selects. Entries resolve the same way
+`-c` values do, so the bare name works. Order of precedence: `-c`, then
+`PATHE_CINEMAS`, then this file, then the built-in four.
 
 **No account, no key, no booking.** Every endpoint used is an unauthenticated
 `GET` on `www.pathe.nl/api`. Nothing here can reserve a seat.

@@ -69,10 +69,16 @@ def _parse_date(value):
 
 
 EPILOG = """\
-bioscopen (default: helmond, eindhoven, tilburg-centrum, tilburg-stappegoor)
+bioscopen (default: je favorieten, anders helmond, eindhoven, tilburg-centrum,
+           tilburg-stappegoor)
   -c neemt slugs met of zonder `pathe-` prefix, komma-gescheiden.
+  -f gebruikt je favorieten uit ~/.config/pathe/settings.json, ook als
+     PATHE_CINEMAS gezet is. -c en -f samen is een fout.
   `pathe cinemas` toont alle 31 met de formaten die ze hebben.
-  Andere standaardset: PATHE_CINEMAS=slug,slug.
+  Volgorde: -c  >  PATHE_CINEMAS  >  settings.json  >  ingebouwde vier.
+
+  settings.json ziet er zo uit:
+    { "favorites": ["helmond", "tilburg-stappegoor"] }
 
 programmalijnen (`tagged`, of de aliassen)
   arthouse   in-the-picture   zo/ma, ~19:00, wisselt per twee weken: A op
@@ -108,7 +114,9 @@ cache
 voorbeelden
   pathe programme                        vanavond, alle vier de bioscopen
   pathe programme tomorrow -c helmond
-  pathe film dune --days 30              waar en wanneer draait Dune
+  pathe film dune --days 30              wanneer draait Dune bij jou
+  pathe where leviticus                  in welke bioscopen draait het
+  pathe where leviticus -f               alleen die van jou
   pathe arthouse                         de zo/ma arthouse-cyclus
   pathe pride                            eerstvolgende Pride Nights
   pathe classics -c eindhoven,helmond

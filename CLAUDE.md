@@ -19,6 +19,7 @@ Common calls:
 pathe programme                       # tonight, default four cinemas
 pathe programme +3 -c eindhoven
 pathe film "dune" --days 30
+pathe where "leviticus"               # which cinemas have it -- one request
 pathe arthouse                        # In the Picture, zo/ma
 pathe pride
 pathe classics -c helmond,eindhoven
@@ -26,6 +27,15 @@ pathe upcoming --limit 40
 ```
 
 Flags work on either side of the subcommand.
+
+`where` answers *where*, `film` answers *when*. For "where can I see X" run
+`where` first -- one request, only the cinemas that have it -- then `film -c
+<the ones that matter>`. Never answer a "where" question by passing all 31
+slugs to `film`.
+
+Favourites live in `~/.config/pathe/settings.json` (`{"favorites": [...]}`),
+written by the home-manager module the flake exports. `-f` selects them even
+when `PATHE_CINEMAS` is set.
 
 ## What it cannot do
 
@@ -43,12 +53,12 @@ GET. If asked to order tickets, say that this tool cannot and point at the
 | `filters.py` | the dub and kids rules, and what they report |
 | `tags.py` | tag vocabulary → display labels |
 | `render.py` | **the only** place output is formatted |
-| `queries.py` | the six operations, each returning finished Markdown |
+| `queries.py` | the seven operations, each returning finished Markdown |
 | `cli.py` | argparse surface; the `--help` epilog is the user documentation |
 
 ## Working on it
 
-`nix develop` then `pytest`. The suite is 139 tests and entirely offline —
+`nix develop` then `pytest`. The suite is 177 tests and entirely offline —
 `tests/conftest.py` serves fixtures recorded from the live API on 2026-09-09.
 Re-record by fetching the same paths if the shapes change.
 
