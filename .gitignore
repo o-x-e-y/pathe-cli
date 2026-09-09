@@ -6,3 +6,4 @@ build/
 *.egg-info/
 result
 result-*
+.direnv
