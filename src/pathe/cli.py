@@ -22,6 +22,7 @@ hundred.
 import argparse
 import asyncio
 import datetime as dt
+import re
 import sys
 
 from . import queries
@@ -48,24 +49,40 @@ STRAND_ALIASES = {
 }
 
 
-def _today():
-    return dt.date.today().isoformat()
-
-
-def _parse_date(value):
-    """Accepts an ISO date, `today`/`vandaag`, `tomorrow`/`morgen`, or `+N`."""
-    if value in (None, "", "today", "vandaag"):
-        return _today()
-    if value in ("tomorrow", "morgen"):
-        return (dt.date.today() + dt.timedelta(days=1)).isoformat()
-    if value.startswith("+") and value[1:].isdigit():
-        return (dt.date.today() + dt.timedelta(days=int(value[1:]))).isoformat()
+def _parse_date(value, today=None):
+    """Accepts an ISO date, `MM-DD`, `DD`, `today`/`vandaag`, `tomorrow`/`morgen`, or `+N`."""
+    today = today or dt.date.today()
     try:
-        return dt.date.fromisoformat(value).isoformat()
+        return _date_from(value, today).isoformat()
     except ValueError:
-        raise argparse.ArgumentTypeError(
-            f"onbegrijpelijke datum: {value!r} (verwacht JJJJ-MM-DD, today, tomorrow of +N)"
-        )
+        pass
+    message = (f"onbegrijpelijke datum: {value!r} "
+               "(verwacht JJJJ-MM-DD, MM-DD, DD, today, tomorrow of +N)")
+    swapped = "-".join(reversed(value.split("-")))
+    try:
+        message += f"; bedoel je {_date_from(swapped, today).isoformat()}?"
+    except ValueError:
+        pass
+    raise argparse.ArgumentTypeError(message)
+
+
+def _date_from(value, today):
+    if value in (None, "", "today", "vandaag"):
+        return today
+    if value in ("tomorrow", "morgen"):
+        return today + dt.timedelta(days=1)
+    if value.startswith("+") and value[1:].isdigit():
+        return today + dt.timedelta(days=int(value[1:]))
+    if m := re.fullmatch(r"(\d{1,2})", value):
+        date = today.replace(day=int(m[1]))
+        if date < today:
+            year, month = divmod(today.year * 12 + today.month, 12)
+            date = dt.date(year, month + 1, int(m[1]))
+        return date
+    if m := re.fullmatch(r"(\d{1,2})-(\d{1,2})", value):
+        date = dt.date(today.year, int(m[1]), int(m[2]))
+        return date if date >= today else date.replace(year=today.year + 1)
+    return dt.date.fromisoformat(value)
 
 
 EPILOG = """\
@@ -103,7 +120,9 @@ formaten
   Een regel zonder formaat (—) is een gewone digitale vertoning.
 
 datums
-  JJJJ-MM-DD, `today`/`vandaag`, `tomorrow`/`morgen`, of `+N` dagen.
+  JJJJ-MM-DD, MM-DD, DD, `today`/`vandaag`, `tomorrow`/`morgen`, of `+N` dagen.
+  MM-DD is dit jaar, of volgend jaar als die datum al voorbij is; DD is deze
+  maand, of volgende maand. Vandaag telt niet als voorbij.
   --days bepaalt het venster vooruit (default 60; pride 90). Pathé publiceert
   ~10 maanden vooruit, maar die staart is vrijwel alleen opera en ballet.
 
@@ -184,7 +203,7 @@ def build_parser():
     add("cinemas", "alle Pathé-bioscopen met hun formaten")
 
     p = add("programme", "programma van een dag")
-    p.add_argument("date", nargs="?", default="today", help="JJJJ-MM-DD, today, tomorrow, +N")
+    p.add_argument("date", nargs="?", default="today", help="JJJJ-MM-DD, MM-DD, DD, today, tomorrow, +N")
 
     p = add("film", "speeltijden van één film over een periode")
     p.add_argument("query", help="titel (of deel daarvan)")
@@ -292,7 +311,7 @@ def main(argv=None):
         return 1
     try:
         sys.stdout.write(asyncio.run(_run(args)))
-    except PatheError as exc:
+    except (PatheError, argparse.ArgumentTypeError) as exc:
         print(f"pathe: {exc}", file=sys.stderr)
         return 2
     except KeyboardInterrupt:

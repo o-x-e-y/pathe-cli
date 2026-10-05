@@ -30,6 +30,53 @@ def test_empty_means_today():
     assert cli._parse_date(None) == dt.date.today().isoformat()
 
 
+@pytest.mark.parametrize("value, today, expected", [
+    ("20", "2026-10-05", "2026-10-20"),
+    ("5", "2026-10-05", "2026-10-05"),
+    ("08", "2026-10-19", "2026-11-08"),
+    ("3", "2026-12-19", "2027-01-03"),
+    ("11-01", "2026-10-05", "2026-11-01"),
+    ("10-05", "2026-10-05", "2026-10-05"),
+    ("01-15", "2026-11-20", "2027-01-15"),
+    ("1-5", "2026-11-20", "2027-01-05"),
+])
+def test_short_dates_mean_the_next_such_date(value, today, expected):
+    assert cli._parse_date(value, dt.date.fromisoformat(today)) == expected
+
+
+@pytest.mark.parametrize("value, today", [
+    ("31", "2026-11-05"),
+    ("30", "2026-01-31"),
+    ("02-30", "2026-01-01"),
+    ("13-09", "2026-01-01"),
+])
+def test_short_dates_that_do_not_exist_are_rejected(value, today):
+    import argparse
+
+    with pytest.raises(argparse.ArgumentTypeError):
+        cli._parse_date(value, dt.date.fromisoformat(today))
+
+
+@pytest.mark.parametrize("value, hint", [
+    ("31-10", "bedoel je 2026-10-31?"),
+    ("13-09-2026", "bedoel je 2026-09-13?"),
+])
+def test_day_month_order_gets_a_suggestion(value, hint):
+    import argparse
+
+    with pytest.raises(argparse.ArgumentTypeError) as exc:
+        cli._parse_date(value, dt.date(2026, 10, 5))
+    assert str(exc.value).endswith(hint)
+
+
+def test_no_suggestion_when_neither_order_is_a_date():
+    import argparse
+
+    with pytest.raises(argparse.ArgumentTypeError) as exc:
+        cli._parse_date("02-30", dt.date(2026, 10, 5))
+    assert "bedoel je" not in str(exc.value)
+
+
 def test_bad_date_is_rejected_with_a_useful_message():
     import argparse
 
@@ -89,6 +136,11 @@ def fake(monkeypatch):
 def run(argv, capsys):
     code = cli.main(argv)
     return code, capsys.readouterr().out
+
+
+def test_bad_date_is_an_error_message_not_a_traceback(fake, capsys):
+    assert cli.main(["programme", "31-10", "-c", "helmond"]) == 2
+    assert "onbegrijpelijke datum" in capsys.readouterr().err
 
 
 def test_cinemas_command(fake, capsys):

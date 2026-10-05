@@ -58,7 +58,7 @@ GET. If asked to order tickets, say that this tool cannot and point at the
 
 ## Working on it
 
-`nix develop` then `pytest`. The suite is 177 tests and entirely offline —
+`nix develop` then `pytest`. The suite is 193 tests and entirely offline —
 `tests/conftest.py` serves fixtures recorded from the live API on 2026-09-09.
 Re-record by fetching the same paths if the shapes change.
 
