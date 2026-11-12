@@ -13,9 +13,12 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.callPackage ./package.nix { };
-      defaultText = lib.literalMD "this flake's package, built with your `pkgs`";
-      description = "The package to install.";
+      default = pkgs.pathe-cli;
+      defaultText = lib.literalExpression "pkgs.pathe-cli";
+      description = ''
+        The package to install. The default needs this flake's
+        `overlays.default` in `nixpkgs.overlays`.
+      '';
     };
 
     favorites = lib.mkOption {
