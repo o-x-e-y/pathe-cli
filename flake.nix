@@ -1,26 +1,27 @@
 {
   description = "Read-only CLI for the public Pathé Nederland programme API";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
-  };
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
   outputs =
+    { nixpkgs, ... }:
+    let
+      forAllSystems =
+        f:
+        nixpkgs.lib.genAttrs [
+          "x86_64-linux"
+          "aarch64-linux"
+          "x86_64-darwin"
+          "aarch64-darwin"
+        ] (system: f nixpkgs.legacyPackages.${system});
+    in
     {
-      nixpkgs,
-      flake-utils,
-      ...
-    }:
-    (flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-      in
-      {
-        packages.default = pkgs.callPackage ./nix/package.nix { };
+      packages = forAllSystems (pkgs: {
+        default = pkgs.callPackage ./nix/package.nix { };
+      });
 
-        devShells.default =
+      devShells = forAllSystems (pkgs: {
+        default =
           with pkgs;
           mkShell {
             buildInputs = [
@@ -38,9 +39,8 @@
               export PYTHONPATH="$PWD/src''${PYTHONPATH:+:$PYTHONPATH}"
             '';
           };
-      }
-    ))
-    // {
+      });
+
       overlays.default = final: _prev: {
         pathe-cli = final.callPackage ./nix/package.nix { };
       };
