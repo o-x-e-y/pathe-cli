@@ -1,7 +1,7 @@
 """Offline test rig.
 
 Every test drives `FakeClient`, which serves the recorded fixtures in
-`tests/fixtures/`. Those were captured from the live API on 2026-09-09, so the
+`tests/fixtures/`. Those were captured from the live API on 2026-09-09 (`show/` on 2026-11-20), so the
 shapes are real rather than invented -- including the awkward ones the filters
 exist for (André Rieu is `nlnl` but not a dub; Toy Story 5 ships as a separate
 dubbed show entry).
@@ -68,6 +68,14 @@ class FakeClient:
             if self.missing_showtimes_ok:
                 return []
             raise
+
+    async def show(self, slug):
+        """Like the real client: an unknown slug is a 404, which comes back as `[]`."""
+        self.calls.append(f"show:{slug}")
+        try:
+            return load(f"show/{slug}.json")
+        except FileNotFoundError:
+            return []
 
     async def gather_showtimes(self, triples):
         return {t: await self.showtimes(*t) for t in triples}

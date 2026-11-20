@@ -25,6 +25,7 @@ class Film:
     release: str = ""
     coming_soon: bool = False
     upcoming_order: int | None = None
+    is_new: bool = False
 
     @property
     def runtime(self):
@@ -65,6 +66,11 @@ class Screening:
     hall: str
     notes: tuple
     status: str
+    booking_url: str = ""
+    # `start`/`end` are HH:MM for display; these keep the date, so a 22:00
+    # screening ending 00:40 is known to end tomorrow.
+    starts_at: dt.datetime | None = None
+    ends_at: dt.datetime | None = None
 
 
 def _fold(text):
@@ -91,6 +97,7 @@ class Catalogue:
                 release=(raw.get("releaseAt") or {}).get("NL_NL", ""),
                 coming_soon=bool(raw.get("isComingSoon")),
                 upcoming_order=raw.get("upcomingOrder"),
+                is_new=bool(raw.get("isNew")),
             )
             self.films[film.slug] = film
 
@@ -167,6 +174,13 @@ def playing_dates(payload, dates):
     return out
 
 
+def _datetime(value):
+    try:
+        return dt.datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def parse_screenings(payload):
     out = []
     for raw in payload or []:
@@ -180,6 +194,9 @@ def parse_screenings(payload):
                 hall=raw.get("auditoriumName") or "",
                 notes=tuple(tagmod.notes(combined)),
                 status=raw.get("status") or "",
+                booking_url=raw.get("refCmd") or "",
+                starts_at=_datetime(raw.get("time")),
+                ends_at=_datetime(raw.get("endTime")),
             )
         )
     out.sort(key=lambda s: s.start)

@@ -13,6 +13,11 @@ re-sort or re-summarise it into your own layout — deterministic output is the
 reason formatting lives in `render.py` rather than being left to a model, and
 the user relies on being able to copy it verbatim.
 
+`--json` (global, every command) prints the same data as JSON. It is there for
+composing with other tools — piping into `jq`, feeding a script — not as a
+reason to fetch data and lay it out yourself. When the answer is for the user,
+print the Markdown.
+
 Common calls:
 
 ```sh
@@ -24,7 +29,18 @@ pathe arthouse                        # In the Picture, zo/ma
 pathe pride
 pathe classics -c helmond,eindhoven
 pathe upcoming --limit 40
+pathe programme -c helmond --links    # booking URL on every row
+pathe film "dune" --starts-after 18:00 --ends-before 23:00
+pathe new -c helmond                  # isNew titles, next 7 days
+pathe info "dune"                     # director, cast, synopsis, trailer
+pathe cinema helmond                  # address, halls, services
+pathe --json programme -c helmond | jq .
 ```
+
+`--links`, `--starts-after` and `--ends-before` exist only on the commands that
+print screenings: `programme`, `film`, `tagged` and its aliases, `new`.
+`--ends-before` is about when the film *ends*, so use it for "home by 23:00";
+there is deliberately no `--starts-before`.
 
 Flags work on either side of the subcommand.
 
@@ -41,7 +57,7 @@ when `PATHE_CINEMAS` is set.
 
 No login, no account, no seat booking — every endpoint is an unauthenticated
 GET. If asked to order tickets, say that this tool cannot and point at the
-`refCmd` booking URL in the API, or at pathe.nl.
+booking URL `--links` prints (the API's `refCmd`), or at pathe.nl.
 
 ## Layout
 
@@ -50,16 +66,17 @@ GET. If asked to order tickets, say that this tool cannot and point at the
 | `api.py` | httpx client, bounded concurrency, retries |
 | `cache.py` | two-tier TTL disk cache (catalogue 6 h, showtimes 30 min) |
 | `catalogue.py` | joins `/api/shows` metadata to a cinema's date matrix |
-| `filters.py` | the dub and kids rules, and what they report |
+| `filters.py` | the dub and kids rules, the time window, and what they report |
 | `tags.py` | tag vocabulary → display labels |
-| `render.py` | **the only** place output is formatted |
-| `queries.py` | the seven operations, each returning finished Markdown |
+| `render.py` | **the only** place output is formatted: Markdown per command, and JSON from the same result |
+| `queries.py` | the ten operations, each building a plain result and returning it rendered |
 | `cli.py` | argparse surface; the `--help` epilog is the user documentation |
 
 ## Working on it
 
-`nix develop` then `pytest`. The suite is 193 tests and entirely offline —
-`tests/conftest.py` serves fixtures recorded from the live API on 2026-09-09.
+`nix develop` then `pytest`. The suite is 289 tests and entirely offline —
+`tests/conftest.py` serves fixtures recorded from the live API on 2026-09-09
+(the `tests/fixtures/show/` ones on 2026-11-20).
 Re-record by fetching the same paths if the shapes change.
 
 Two traps worth knowing:

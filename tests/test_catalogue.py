@@ -155,3 +155,33 @@ def test_playing_dates_sorts_and_survives_an_empty_payload():
         "2026-09-10",
     ]
     assert playing_dates({}, ["2026-09-09"]) == {}
+
+
+def test_catalogue_reads_the_is_new_flag(catalogue):
+    assert catalogue.get("by-any-means-52350").is_new
+    assert not catalogue.get("spider-man-brand-new-day-48103").is_new
+    assert not catalogue.get("een-of-ander-evenement-99999").is_new
+
+
+def test_parse_screenings_keeps_the_booking_url_and_full_datetimes():
+    import datetime as dt
+
+    first = parse_screenings(load("showtimes-spider-arena.json"))[0]
+    assert first.booking_url.startswith("https://s.pathe.nl/")
+    assert first.starts_at.strftime("%H:%M") == first.start
+    assert first.ends_at.strftime("%H:%M") == first.end
+    assert isinstance(first.ends_at, dt.datetime)
+
+
+def test_an_end_after_midnight_keeps_its_date():
+    """`end` alone says 00:40; only the full datetime says it is tomorrow."""
+    (late,) = parse_screenings([
+        {"time": "2026-09-13 22:00:00", "endTime": "2026-09-14 00:40:00", "refCmd": "u"},
+    ])
+    assert late.end == "00:40"
+    assert late.ends_at.isoformat() == "2026-09-14T00:40:00"
+
+
+def test_a_screening_without_end_or_link():
+    (bare,) = parse_screenings([{"time": "2026-09-13 22:00:00"}])
+    assert bare.booking_url == "" and bare.ends_at is None and bare.end == ""

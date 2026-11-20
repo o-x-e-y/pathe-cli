@@ -271,3 +271,122 @@ def test_cinemas_and_favorites_together_is_an_error(client):
     args = cli.parse_args(["-c", "helmond", "-f", "where", "dune"])
     with pytest.raises(PatheError, match="niet allebei"):
         asyncio.run(_dispatch(args, client))
+
+
+# ------------------------------------------------------------------ time flags
+
+@pytest.mark.parametrize("value, minutes", [
+    ("19:00", 19 * 60), ("9:30", 9 * 60 + 30), ("19", 19 * 60), ("0:00", 0), ("24:00", 24 * 60),
+])
+def test_parse_time(value, minutes):
+    assert cli._parse_time(value) == dt.timedelta(minutes=minutes)
+
+
+@pytest.mark.parametrize("value", ["25:00", "24:01", "19:60", "19:5", "7pm", "", "19.00"])
+def test_parse_time_rejects_with_a_dutch_message(value):
+    import argparse
+
+    with pytest.raises(argparse.ArgumentTypeError) as exc:
+        cli._parse_time(value)
+    assert str(exc.value).startswith(f"onbegrijpelijke tijd: {value!r}")
+
+
+def test_bad_time_is_a_usage_error(fake, capsys):
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["programme", "--starts-after", "25:00"])
+    assert exc.value.code == 2
+    assert "onbegrijpelijke tijd" in capsys.readouterr().err
+
+
+SCREENING_COMMANDS = [
+    ["programme"], ["film", "dune"], ["tagged", "classics"], ["arthouse"], ["pride"],
+    ["classics"], ["new"],
+]
+
+
+@pytest.mark.parametrize("command", SCREENING_COMMANDS)
+def test_screening_flags_on_every_screening_command(command):
+    args = cli.parse_args([*command, "--links", "--starts-after", "18", "--ends-before", "23:30"])
+    assert args.links is True
+    assert args.starts_after == dt.timedelta(hours=18)
+    assert args.ends_before == dt.timedelta(hours=23, minutes=30)
+    plain = cli.parse_args(command)
+    assert plain.links is False and plain.starts_after is None and plain.ends_before is None
+
+
+@pytest.mark.parametrize("command", [
+    ["where", "dune"], ["upcoming"], ["search", "dune"], ["cinemas"], ["info", "dune"],
+    ["cinema", "helmond"],
+])
+def test_screening_flags_are_rejected_where_there_are_no_screenings(command):
+    with pytest.raises(SystemExit):
+        cli.parse_args([*command, "--links"])
+
+
+def test_new_defaults_to_a_week():
+    assert cli.parse_args(["new"]).days == 7
+
+
+def test_programme_links_and_window_end_to_end(fake, capsys):
+    code, out = run(["programme", SUNDAY, "-c", "helmond", "--links", "--starts-after", "19:00",
+                     "--ends-before", "23:00"], capsys)
+    assert code == 0
+    assert "https://s.pathe.nl/" in out and "10:30–" not in out and "21:15–23:21" not in out
+    assert "buiten het tijdvenster" in out
+
+
+# ------------------------------------------------------------------------ json
+
+def test_json_flag_parses_on_either_side():
+    assert cli.parse_args(["--json", "programme"]).json is True
+    assert cli.parse_args(["programme", "--json"]).json is True
+    assert cli.parse_args(["programme"]).json is False
+
+
+def test_json_flag_before_the_subcommand_survives(fake, capsys):
+    import json
+
+    _, before = run(["--json", "programme", SUNDAY, "-c", "helmond"], capsys)
+    _, after = run(["programme", SUNDAY, "-c", "helmond", "--json"], capsys)
+    assert before == after
+    assert json.loads(before)["date"] == SUNDAY
+
+
+@pytest.mark.parametrize("argv", [
+    ["cinemas"], ["cinema", "helmond"], ["programme", SUNDAY], ["film", "fuori", "--from", SUNDAY],
+    ["where", "leviticus"], ["tagged", "classics", "--from", SUNDAY], ["arthouse", "--from", SUNDAY],
+    ["pride", "--from", SUNDAY], ["classics", "--from", SUNDAY], ["new", "--from", SUNDAY],
+    ["upcoming"], ["search", "dune"], ["info", "spider-man"],
+])
+def test_every_command_speaks_json(argv, fake, capsys):
+    import json
+
+    code, out = run(["--json", "-c", "helmond", *argv], capsys)
+    assert code == 0
+    assert isinstance(json.loads(out), dict)
+    assert out.endswith("}\n")
+
+
+def test_errors_stay_on_stderr_in_json_mode(fake, capsys):
+    assert cli.main(["--json", "programme", "-c", "atlantis"]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == "" and "onbekende bioscoop" in captured.err
+
+
+# ---------------------------------------------------------------- info, cinema
+
+def test_info_command(fake, capsys):
+    code, out = run(["info", "spider-man"], capsys)
+    assert code == 0 and out.startswith("# Spider-Man: Brand New Day")
+    assert "cinemas" not in fake[0].calls, "info never resolves cinemas"
+
+
+@pytest.mark.parametrize("slug", ["helmond", "pathe-helmond"])
+def test_cinema_command_resolves_like_dash_c(slug, fake, capsys):
+    code, out = run(["cinema", slug], capsys)
+    assert code == 0 and out.startswith("# Pathé Helmond\n")
+
+
+def test_cinema_command_unknown_slug(fake, capsys):
+    assert cli.main(["cinema", "atlantis"]) == 2
+    assert "onbekende bioscoop: atlantis" in capsys.readouterr().err

@@ -142,3 +142,99 @@ def test_summary_dedupes_across_cinemas():
     assert summary.count("Toy Story 5 (NL)") == 1
     assert summary.startswith("gefilterd: 1 nagesynchroniseerd")
     assert "1 kinderfilm (Bumba)" in summary
+
+
+# ----------------------------------------------------------------- time window
+
+def _cell(*spans, date="2026-09-13"):
+    """A cell whose screenings run over `spans` of (start, end) datetimes."""
+    import datetime as dt
+
+    from pathe.catalogue import Cell, Film, Screening
+
+    def at(text):
+        return dt.datetime.fromisoformat(text) if text else None
+
+    screenings = [
+        Screening(start=s[11:16], end=(e or "")[11:16], formats=(), version="", hall="",
+                  notes=(), status="", starts_at=at(s), ends_at=at(e))
+        for s, e in spans
+    ]
+    return Cell(date=date, cinema="c", film=Film(slug="x-1", title="X"), screenings=screenings)
+
+
+def _hm(text):
+    import datetime as dt
+
+    hours, minutes = text.split(":")
+    return dt.timedelta(hours=int(hours), minutes=int(minutes))
+
+
+EVENING = ("2026-09-13 19:00", "2026-09-13 21:00")
+LATE = ("2026-09-13 22:00", "2026-09-14 00:40")
+
+
+@pytest.mark.parametrize("bounds, kept", [
+    ({"starts_after": "19:00"}, 1),
+    ({"starts_after": "19:01"}, 0),
+    ({"ends_before": "21:00"}, 1),
+    ({"ends_before": "20:59"}, 0),
+])
+def test_window_bounds_are_inclusive(bounds, kept):
+    cell = _cell(EVENING)
+    removed = filters.window([cell], **{k: _hm(v) for k, v in bounds.items()})
+    assert len(cell.screenings) == kept and removed == 1 - kept
+
+
+@pytest.mark.parametrize("ends_before", ["23:30", "24:00"])
+def test_a_screening_ending_after_midnight_fails_ends_before(ends_before):
+    """22:00-00:40 ends tomorrow. Compared on HH:MM alone it would look like it
+    ends at 00:40 today and pass any limit."""
+    cell = _cell(LATE)
+    assert filters.window([cell], ends_before=_hm(ends_before)) == 1
+    assert cell.screenings == []
+
+
+def test_both_bounds_together():
+    early = ("2026-09-13 13:00", "2026-09-13 15:00")
+    cell = _cell(early, EVENING, LATE)
+    removed = filters.window([cell], starts_after=_hm("18:00"), ends_before=_hm("23:00"))
+    assert removed == 2
+    assert [s.start for s in cell.screenings] == ["19:00"]
+
+
+def test_no_end_time_cannot_meet_ends_before():
+    cell = _cell(("2026-09-13 19:00", None))
+    assert filters.window([cell], starts_after=_hm("18:00")) == 0
+    assert filters.window([cell], ends_before=_hm("23:59")) == 1
+
+
+def test_no_window_leaves_everything():
+    cell = _cell(EVENING, LATE)
+    assert filters.window([cell]) == 0
+    assert len(cell.screenings) == 2
+
+
+def test_window_is_relative_to_the_cells_own_date():
+    """A screening listed under the 13th that starts at 00:30 on the 14th is
+    still after 22:00 *that evening*."""
+    cell = _cell(("2026-09-14 00:30", "2026-09-14 02:30"))
+    assert filters.window([cell], starts_after=_hm("22:00")) == 0
+
+
+def test_the_window_count_alone_makes_filtered_truthy():
+    """Nothing disappears silently: a window-only drop still prints the line."""
+    assert filters.Filtered(outside_window=1)
+    assert filters.Filtered(outside_window=1).summary() == (
+        "gefilterd: 1 voorstelling buiten het tijdvenster"
+    )
+    assert filters.Filtered(outside_window=12).summary().endswith(
+        "12 voorstellingen buiten het tijdvenster"
+    )
+
+
+def test_the_window_count_follows_the_title_filters():
+    dropped = filters.Filtered(dubs=["A (NL)"], outside_window=3)
+    assert dropped.summary() == (
+        "gefilterd: 1 nagesynchroniseerd (A (NL)); 3 voorstellingen buiten het tijdvenster"
+    )
