@@ -27,11 +27,31 @@ $ pathe arthouse -c helmond --days 21
 | `pathe pride` | Pride Night (woensdag, ~maandelijks) |
 | `pathe classics` | heruitgaves — they play briefly, so they get their own list |
 | `pathe tagged <tag>` | any other strand: `ladiesnight`, `horrornight`, `operaencore`, ... |
+| `pathe new` | what Pathé flags as new (roughly the last week's releases), next 7 days |
 | `pathe upcoming` | coming soon |
 | `pathe search <titel>` | find a title and its slug |
+| `pathe info <titel>` | director, cast, Kijkwijzer, synopsis and a trailer for one title |
 | `pathe cinemas` | all 31, with the formats each one has |
+| `pathe cinema <slug>` | one cinema: address, halls, seats, services |
 
-`pathe --help` documents the strands, the filters and the date syntax in full.
+`pathe --help` documents the strands, the filters, the time flags and the date
+syntax in full.
+
+The commands that print screenings (`programme`, `film`, `tagged` and its
+aliases, `new`) also take:
+
+- `--links` — the booking URL at the end of each row, bare so it copies cleanly.
+  The tool still books nothing; it prints the link Pathé hands out.
+- `--starts-after HH:MM` and `--ends-before HH:MM` — `19:00`, `9:30`, `19`, or
+  `24:00` for the end of the day, inclusive, on the screening's own day: a
+  22:00–00:40 screening ends tomorrow and fails `--ends-before 23:30`. There is
+  no `--starts-before` on purpose: when you are out depends on when the film
+  ends, and a 90-minute film and a three-hour one differ exactly there. What
+  the window drops is counted on the `gefilterd:` line.
+
+```
+$ pathe programme -c helmond --links --starts-after 21
+```
 
 ## Notes
 
@@ -65,6 +85,53 @@ Stappegoor. Override per call with `-c`, or globally with `PATHE_CINEMAS`.
 four-cinema day costs ~5 s; the same query again is instant. `--no-cache` skips
 it, `--clear-cache` empties it.
 
+## JSON
+
+`--json` works with every command, on either side of it, and prints the same
+data as the Markdown: UTF-8, two-space indent, English keys, deterministic
+order, a trailing newline. Empty results are still valid JSON, with empty lists.
+It exists for composing with other tools; the Markdown is what you read.
+
+A screening:
+
+```json
+{
+  "date": "2026-09-13",
+  "start": "2026-09-13T19:50",
+  "end": "2026-09-13T22:35",
+  "hall": "2",
+  "formats": [],
+  "version": "OV",
+  "notes": ["met pauze"],
+  "booking_url": "https://s.pathe.nl/nl/V0014S52519/booking"
+}
+```
+
+`booking_url` is always there, with or without `--links`, and `null` when Pathé
+has none. A film:
+
+```json
+{
+  "slug": "fuori-52683",
+  "title": "Fuori",
+  "runtime_min": 115,
+  "rating": "-12 jaar",
+  "genres": ["Drama"],
+  "directors": ["Mario Martone"],
+  "strands": ["In the Picture"],
+  "release": "2026-06-18",
+  "coming_soon": false
+}
+```
+
+The day-based commands nest them as `cinemas[] → films[]` (`days[]` for
+`film`), each entry `{date, film, screenings}`. What the filters removed is
+`filtered: {dubs, kids, outside_time_window}`; the other title matches `film`,
+`where` and `info` mention are `also_found: [{title, slug}]`. Errors still go
+to stderr with exit code 2.
+
+    pathe --json programme -c helmond | jq -r '.cinemas[].films[].film.title'
+
 ## Install
 
 ```nix
@@ -81,7 +148,7 @@ it, `--clear-cache` empties it.
 ```sh
 nix run .            # without installing
 nix develop          # dev shell; src/ is already on PYTHONPATH
-pytest               # 139 tests, fully offline
+pytest               # 289 tests, fully offline
 ```
 
 ## Why the fanout stays small

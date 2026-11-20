@@ -1,6 +1,7 @@
 """Rendering. The determinism tests here are the whole point of formatting
 server-side rather than handing raw JSON to a model to lay out."""
 
+import pytest
 from conftest import load
 
 from pathe import render
@@ -151,3 +152,102 @@ def test_cinema_rows_of_nothing():
     from pathe import render
 
     assert render.cinema_rows([]) == []
+
+
+def test_links_add_an_aligned_bare_url_column():
+    rows = render.screening_rows(parse_screenings(load("showtimes-spider-arena.json")), links=True)
+    starts = {row.index("https://") for row in rows}
+    assert len(starts) == 1, "every URL starts in the same column"
+    assert all(row.split()[-1].startswith("https://s.pathe.nl/") for row in rows)
+    assert "](" not in "".join(rows), "a plain URL, not Markdown link syntax"
+
+
+def test_links_off_is_the_old_layout():
+    screenings = parse_screenings(load("showtimes-spider-arena.json"))
+    rows = render.screening_rows(screenings)
+    assert rows == render.screening_rows(screenings, links=False)
+    assert "https://" not in "".join(rows)
+
+
+def test_a_screening_without_a_url_gets_no_link():
+    screenings = parse_screenings([
+        {"time": "2026-09-13 19:00:00", "endTime": "2026-09-13 21:00:00",
+         "auditoriumName": "1", "refCmd": "https://s.pathe.nl/a"},
+        {"time": "2026-09-13 21:30:00", "endTime": "2026-09-13 23:30:00",
+         "auditoriumName": "1"},
+    ])
+    with_link, without = render.screening_rows(screenings, links=True)
+    assert with_link.endswith("https://s.pathe.nl/a")
+    assert without == "  21:30–23:30  —  zaal 1"
+
+
+def test_plain_text_strips_markup():
+    markup = "<p><strong>Adres</strong>&nbsp;Steenweg 1<br />\r\nTarief &euro; 2,50</p><p>&nbsp;</p>"
+    assert render.plain_text(markup) == "Adres: Steenweg 1\nTarief € 2,50"
+    assert render.plain_text(None) == ""
+
+
+def test_json_conventions():
+    out = render.to_json({"name": "Pathé", "films": []})
+    assert out == '{\n  "name": "Pathé",\n  "films": []\n}\n'
+
+
+def test_screening_json_keeps_dates_and_nulls_a_missing_link():
+    (late,) = parse_screenings([
+        {"time": "2026-09-13 22:00:00", "endTime": "2026-09-14 00:40:00"},
+    ])
+    got = render.screening_json(late)
+    assert got["date"] == "2026-09-13"
+    assert got["start"] == "2026-09-13T22:00"
+    assert got["end"] == "2026-09-14T00:40"
+    assert got["booking_url"] is None
+    assert list(got) == ["date", "start", "end", "hall", "formats", "version", "notes",
+                         "booking_url"]
+
+
+def test_film_json_shape():
+    got = render.film_json(film(directors=("A", "B"), strand="Classics"))
+    assert got == {
+        "slug": "x-1", "title": "Testfilm", "runtime_min": 100, "rating": "-12 jaar",
+        "genres": ["Drama"], "directors": ["A", "B"], "strands": ["Classics"],
+        "release": None, "coming_soon": False,
+    }
+    assert render.film_json(Film(slug="a-1", title="A"))["runtime_min"] is None
+
+
+def test_plain_text_keeps_a_label_apart_from_its_text():
+    """Helmond's real Parkeren HTML: the bold heading and the sentence after it
+    are separated only by `&nbsp;`, so dropping the tags glued them together."""
+    helmond = next(c for c in load("cinemas.json") if c["slug"] == "pathe-helmond")
+    parking, support, _ = (s["description"] for s in helmond["services"])
+    assert render.plain_text(parking).splitlines() == [
+        ("1. Parkeergarage Boscotondo: Het tarief is € 2,50 per uur."
+         " Het dagtarief is € 15,50 per dag."),
+        ("Gehandicaptenparkeerplaats: De dichtstbijzijnde gehandicaptenparkeerplaats vind je op"
+         " het Frans Jospeh van Thielpark."),
+        "Adres: Frans Joseph van Thielpark 1",
+        "Tarief: € 2,50",
+        ("2. Parkeerplaats Hotel West Ende: Het tarief voor het parkeren bedraagt € 2,- per uur"
+         " (of 4 uur gratis bij deelname Filmdiner)."),
+        "Adres: Steenweg 1",
+    ]
+    lines = render.plain_text(support).splitlines()
+    assert lines[:2] == [
+        "Rolstoelmogelijkheden",
+        ("Alle zalen zijn rolstoeltoegankelijk en gelijkvloers (via lift) te bereiken."
+         " Rolstoelvriendelijk toilet aanwezig."),
+    ], "a heading already on its own line stays there"
+    assert "Binnen 48 uur worden gevonden voorwerpen op ILost.co gezet." in lines, (
+        "bold or linked words inside a sentence stay inline"
+    )
+
+
+@pytest.mark.parametrize("markup, expected", [
+    ("<p><strong>3.</strong><strong>P+R Noord</strong>&nbsp;Vanaf hier</p>", "3. P+R Noord: Vanaf hier"),
+    ("<p><strong>Plaats</strong>:&nbsp;De dichtstbijzijnde</p>", "Plaats: De dichtstbijzijnde"),
+    ("<p><strong>Plaats</strong><strong>:</strong>&nbsp;De</p>", "Plaats: De"),
+    ("<p><strong>Plek vinden?</strong>&nbsp;Kijk hier</p>", "Plek vinden? Kijk hier"),
+    ("<p><strong>Gratis</strong></p>", "Gratis"),
+])
+def test_plain_text_label_edge_cases(markup, expected):
+    assert render.plain_text(markup) == expected

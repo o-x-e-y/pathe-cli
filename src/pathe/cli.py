@@ -66,6 +66,19 @@ def _parse_date(value, today=None):
     raise argparse.ArgumentTypeError(message)
 
 
+def _parse_time(value):
+    """`19:00`, `9:30` or `19` as a timedelta after midnight. `24:00` is the
+    end of the day, which a `datetime.time` cannot hold."""
+    m = re.fullmatch(r"(\d{1,2})(?::(\d{2}))?", value.strip())
+    if m:
+        hours, minutes = int(m[1]), int(m[2] or 0)
+        if (hours < 24 and minutes < 60) or (hours, minutes) == (24, 0):
+            return dt.timedelta(hours=hours, minutes=minutes)
+    raise argparse.ArgumentTypeError(
+        f"onbegrijpelijke tijd: {value!r} (verwacht UU:MM, U:MM of UU, van 0:00 tot 24:00)"
+    )
+
+
 def _date_from(value, today):
     if value in (None, "", "today", "vandaag"):
         return today
@@ -91,7 +104,8 @@ bioscopen (default: je favorieten, anders helmond, eindhoven, tilburg-centrum,
   -c neemt slugs met of zonder `pathe-` prefix, komma-gescheiden.
   -f gebruikt je favorieten uit ~/.config/pathe/settings.json, ook als
      PATHE_CINEMAS gezet is. -c en -f samen is een fout.
-  `pathe cinemas` toont alle 31 met de formaten die ze hebben.
+  `pathe cinemas` toont alle 31 met de formaten die ze hebben, `pathe cinema
+  helmond` het adres, de zalen en de voorzieningen van één.
   Volgorde: -c  >  PATHE_CINEMAS  >  settings.json  >  ingebouwde vier.
 
   settings.json ziet er zo uit:
@@ -114,6 +128,31 @@ filters (standaard AAN, behalve bij `film`)
   Golden Earring Live zijn ook `nlnl` en horen juist te blijven staan.
   --include-dubs / --include-kids / --all zetten ze uit.
   `film` filtert niet: als je een titel met naam opvraagt bedoel je die titel.
+  Het tijdvenster hieronder geldt wel bij `film`, als je het opgeeft.
+
+voorstellingen (programme, film, tagged, arthouse, pride, classics, new)
+  --links               de boekingslink achter elke voorstelling, als kale URL
+                        zodat hij goed kopieert. Boeken doet deze tool niet.
+  --starts-after UU:MM  alleen wat om of na UU:MM begint
+  --ends-before UU:MM   alleen wat om of voor UU:MM afgelopen is
+  Tijden als 19:00, 9:30, 19 of 24:00 (einde van de dag), op de dag van de
+  voorstelling: 22:00–00:40 eindigt morgen en valt dus buiten --ends-before
+  23:30. Geen --starts-before: of je op tijd thuis bent hangt af van wanneer
+  de film afloopt, en 90 minuten of 3 uur maakt daar alles uit.
+  Wat buiten het venster valt, telt mee achter `gefilterd:`.
+
+nieuw, info
+  `pathe new` toont de films die Pathé als nieuw markeert -- in de praktijk
+  uitgebracht in ongeveer de laatste week -- per bioscoop, met de filters aan.
+  `pathe info <titel>` geeft regie, cast, Kijkwijzer, synopsis en trailer.
+
+json
+  --json (voor of na het commando, bij elk commando) geeft dezelfde gegevens
+  als JSON, om door te geven aan andere tools. Een voorstelling heeft date,
+  start, end (JJJJ-MM-DDTUU:MM), hall, formats, version, notes en booking_url --
+  die altijd, ook zonder --links, en null als Pathé er geen heeft. Wat wegviel
+  staat onder `filtered`, andere treffers onder `also_found`. Fouten blijven
+  op stderr, met exitcode 2.
 
 formaten
   Per voorstelling, niet per film: IMAX 4DX 3D ScreenX Dolby Atmos/Cinema.
@@ -123,8 +162,9 @@ datums
   JJJJ-MM-DD, MM-DD, DD, `today`/`vandaag`, `tomorrow`/`morgen`, of `+N` dagen.
   MM-DD is dit jaar, of volgend jaar als die datum al voorbij is; DD is deze
   maand, of volgende maand. Vandaag telt niet als voorbij.
-  --days bepaalt het venster vooruit (default 60; pride 90). Pathé publiceert
-  ~10 maanden vooruit, maar die staart is vrijwel alleen opera en ballet.
+  --days bepaalt het venster vooruit (default 60; pride 90; new 7). Pathé
+  publiceert ~10 maanden vooruit, maar die staart is vrijwel alleen opera en
+  ballet.
 
 cache
   Catalogus 6 u, speeltijden 30 min, onder ~/.cache/pathe.
@@ -140,6 +180,12 @@ voorbeelden
   pathe pride                            eerstvolgende Pride Nights
   pathe classics -c eindhoven,helmond
   pathe upcoming --limit 40
+  pathe programme -c helmond --links     met boekingslinks
+  pathe film dune --starts-after 18:00 --ends-before 23:00
+  pathe new -c helmond                   wat er deze week nieuw is
+  pathe info dune                        regie, cast, synopsis, trailer
+  pathe cinema helmond                   adres, zalen, voorzieningen
+  pathe --json programme -c helmond      hetzelfde, als JSON
 """
 # Values for the global flags when given on neither side of the subcommand.
 # Applied after parsing rather than through `set_defaults`, because
@@ -154,6 +200,7 @@ GLOBAL_DEFAULTS = {
     "include_dubs": False,
     "include_kids": False,
     "all": False,
+    "json": False,
 }
 
 
@@ -181,6 +228,22 @@ def _global_flags():
                    help="toon kinderfilms")
     p.add_argument("--all", action="store_true", default=argparse.SUPPRESS,
                    help="geen filters (dubs + kinderfilms)")
+    p.add_argument("--json", action="store_true", default=argparse.SUPPRESS,
+                   help="JSON in plaats van Markdown")
+    return p
+
+
+def _screening_flags():
+    """For the commands that print screening rows. Fresh per subparser for the
+    same reason as `_global_flags`; these exist only after the subcommand, so
+    their defaults are ordinary ones."""
+    p = argparse.ArgumentParser(add_help=False)
+    p.add_argument("--links", action="store_true",
+                   help="boekingslink achter elke voorstelling")
+    p.add_argument("--starts-after", type=_parse_time, metavar="UU:MM",
+                   help="alleen voorstellingen die om of na UU:MM beginnen")
+    p.add_argument("--ends-before", type=_parse_time, metavar="UU:MM",
+                   help="alleen voorstellingen die om of voor UU:MM afgelopen zijn")
     return p
 
 
@@ -194,18 +257,22 @@ def build_parser():
     )
     sub = parser.add_subparsers(dest="command", metavar="<command>")
 
-    def add(name, help):
+    def add(name, help, screenings=False):
         # Attaching the global flags here too is what makes the natural
         # `pathe programme -c helmond` work as well as `pathe -c helmond programme`.
-        return sub.add_parser(name, parents=[_global_flags()], help=help,
+        parents = [_global_flags(), *([_screening_flags()] if screenings else [])]
+        return sub.add_parser(name, parents=parents, help=help,
                               formatter_class=argparse.RawDescriptionHelpFormatter)
 
     add("cinemas", "alle Pathé-bioscopen met hun formaten")
 
-    p = add("programme", "programma van een dag")
+    p = add("cinema", "adres, zalen en voorzieningen van één bioscoop")
+    p.add_argument("slug", help="bioscoop, met of zonder `pathe-`")
+
+    p = add("programme", "programma van een dag", screenings=True)
     p.add_argument("date", nargs="?", default="today", help="JJJJ-MM-DD, MM-DD, DD, today, tomorrow, +N")
 
-    p = add("film", "speeltijden van één film over een periode")
+    p = add("film", "speeltijden van één film over een periode", screenings=True)
     p.add_argument("query", help="titel (of deel daarvan)")
     p.add_argument("--days", type=int, default=DEFAULT_HORIZON_DAYS)
     p.add_argument("--from", dest="start", default="today")
@@ -215,22 +282,29 @@ def build_parser():
     p.add_argument("--days", type=int, default=DEFAULT_HORIZON_DAYS)
     p.add_argument("--from", dest="start", default="today")
 
-    p = add("tagged", "programmalijn: arthouse, pride, classics, ...")
+    p = add("tagged", "programmalijn: arthouse, pride, classics, ...", screenings=True)
     p.add_argument("tag")
     p.add_argument("--days", type=int, default=DEFAULT_HORIZON_DAYS)
     p.add_argument("--from", dest="start", default="today")
 
     for name, days in (("arthouse", DEFAULT_HORIZON_DAYS), ("pride", 90),
                        ("classics", DEFAULT_HORIZON_DAYS)):
-        p = add(name, f"alias voor `tagged {name}`")
+        p = add(name, f"alias voor `tagged {name}`", screenings=True)
         p.add_argument("--days", type=int, default=days)
         p.add_argument("--from", dest="start", default="today")
+
+    p = add("new", "films die net uit zijn (Pathé's `isNew`)", screenings=True)
+    p.add_argument("--days", type=int, default=7)
+    p.add_argument("--from", dest="start", default="today")
 
     p = add("upcoming", "binnenkort in de bioscoop")
     p.add_argument("--limit", type=int, default=25)
 
     p = add("search", "zoek een film in de catalogus")
     p.add_argument("query")
+
+    p = add("info", "regie, cast, synopsis en trailer van één film")
+    p.add_argument("query", help="titel (of deel daarvan)")
 
     return parser
 
@@ -246,15 +320,24 @@ async def _dispatch(args, client):
         "include_kids": args.include_kids or args.all,
     }
     command = args.command
+    as_json = args.json
 
     # Commands that never touch a cinema answer before the slug lookup, so
     # `pathe upcoming` stays a single request.
     if command == "cinemas":
-        return await queries.list_cinemas(client)
+        return await queries.list_cinemas(client, as_json=as_json)
     if command == "search":
-        return await queries.find_film(client, args.query)
+        return await queries.find_film(client, args.query, as_json=as_json)
+    if command == "info":
+        return await queries.film_info(client, args.query, as_json=as_json)
     if command == "upcoming":
-        return await queries.upcoming(client, args.limit, include_dubs=flags["include_dubs"])
+        return await queries.upcoming(client, args.limit, include_dubs=flags["include_dubs"],
+                                      as_json=as_json)
+    if command == "cinema":
+        found, unknown = resolve([args.slug], [c["slug"] for c in await client.cinemas()])
+        if unknown or not found:
+            raise PatheError(f"onbekende bioscoop: {args.slug} (zie `pathe cinemas`)")
+        return await queries.cinema_info(client, found[0], as_json=as_json)
 
     if args.cinemas and args.favorites:
         raise PatheError("kies `-c` of `-f`, niet allebei")
@@ -273,17 +356,23 @@ async def _dispatch(args, client):
     if not cinemas:
         raise PatheError("geen bioscopen opgegeven")
 
+    shown = {
+        "links": getattr(args, "links", False),
+        "starts_after": getattr(args, "starts_after", None),
+        "ends_before": getattr(args, "ends_before", None),
+        "as_json": as_json,
+    }
     if command == "programme":
-        return await queries.programme(client, cinemas, _parse_date(args.date), **flags)
+        return await queries.programme(client, cinemas, _parse_date(args.date), **flags, **shown)
     if command == "film":
         dates = date_range(args.days, dt.date.fromisoformat(_parse_date(args.start)))
-        return await queries.film_showtimes(client, args.query, cinemas, dates)
+        return await queries.film_showtimes(client, args.query, cinemas, dates, **shown)
     if command == "where":
         # `where` reuses the resolved set as its "Jouw bioscopen" list, so
         # `-c breda,nijmegen` asks the same question about a different pair.
         dates = date_range(args.days, dt.date.fromisoformat(_parse_date(args.start)))
         return await queries.where(client, args.query, cinemas, dates,
-                                   only_favorites=args.favorites)
+                                   only_favorites=args.favorites, as_json=as_json)
     if command in ("tagged", "arthouse", "pride", "classics"):
         tag = {
             "arthouse": "in-the-picture",
@@ -291,7 +380,10 @@ async def _dispatch(args, client):
             "classics": "classics",
         }.get(command) or STRAND_ALIASES.get(args.tag.lower(), args.tag)
         dates = date_range(args.days, dt.date.fromisoformat(_parse_date(args.start)))
-        return await queries.tagged(client, tag, cinemas, dates, **flags)
+        return await queries.tagged(client, tag, cinemas, dates, **flags, **shown)
+    if command == "new":
+        dates = date_range(args.days, dt.date.fromisoformat(_parse_date(args.start)))
+        return await queries.new(client, cinemas, dates, **flags, **shown)
     raise AssertionError(f"unhandled command {command!r}")
 async def _run(args):
     cache = Cache(enabled=not args.no_cache)

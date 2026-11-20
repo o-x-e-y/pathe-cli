@@ -88,7 +88,9 @@ class PatheClient:
         return await self._get("/shows", CATALOGUE_TTL)
 
     async def show(self, slug):
-        return await self._get(f"/show/{slug}", CATALOGUE_TTL)
+        """Full detail for one title. An unknown slug is a 404 with a JSON
+        string body; it comes back as `[]`, like a missing showtimes day."""
+        return await self._get(f"/show/{slug}", CATALOGUE_TTL, missing_ok=True)
 
     async def cinema_matrix(self, cinema):
         """Which titles play at `cinema` on which dates, ~10 months ahead.

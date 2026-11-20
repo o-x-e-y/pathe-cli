@@ -1,7 +1,7 @@
-"""The five operations, end to end against recorded fixtures."""
+"""The operations, end to end against recorded fixtures."""
 
 import pytest
-from conftest import CINEMA, MONDAY, SUNDAY
+from conftest import CINEMA, MONDAY, SUNDAY, FakeClient, load
 
 from pathe import queries
 
@@ -242,3 +242,282 @@ async def test_where_keeps_the_cinema_list_tight(client):
     elders = out.split("## Elders")[1]
     assert "\n\n  `pathe-arena`" not in elders
     assert "`pathe-arena`\n     Pathé Arena" in elders
+
+
+# ------------------------------------------------------------------------ JSON
+
+SCREENING_KEYS = ["date", "start", "end", "hall", "formats", "version", "notes", "booking_url"]
+FILM_KEYS = ["slug", "title", "runtime_min", "rating", "genres", "directors", "strands",
+             "release", "coming_soon"]
+
+
+async def test_programme_json_carries_the_same_data(client):
+    import json
+
+    got = json.loads(await queries.programme(client, [CINEMA], SUNDAY, as_json=True))
+    assert got["date"] == SUNDAY
+    (helmond,) = got["cinemas"]
+    assert helmond["slug"] == CINEMA and helmond["name"] == "Pathé Helmond"
+    fuori = next(f for f in helmond["films"] if f["film"]["title"] == "Fuori")
+    assert list(fuori["film"]) == FILM_KEYS
+    assert fuori["film"]["strands"] == ["In the Picture"]
+    (screening,) = fuori["screenings"]
+    assert list(screening) == SCREENING_KEYS
+    assert screening["start"] == "2026-09-13T18:45" and screening["hall"] == "1"
+    assert screening["booking_url"].startswith("https://"), "present without --links"
+    assert got["filtered"]["dubs"][0] == "Minions & Monsters (NL)"
+    assert got["filtered"]["outside_time_window"] == 0
+
+
+async def test_programme_json_lists_what_markdown_lists(client):
+    import json
+
+    markdown = await queries.programme(client, [CINEMA], SUNDAY)
+    got = json.loads(await queries.programme(client, [CINEMA], SUNDAY, as_json=True))
+    titles = [f["film"]["title"] for f in got["cinemas"][0]["films"]]
+    assert titles and all(f"**{t}**" in markdown for t in titles)
+    assert markdown.count("**") // 2 == len(titles)
+
+
+async def test_empty_results_are_valid_json_with_empty_lists(client):
+    import json
+
+    got = json.loads(await queries.tagged(client, "pridenight", [CINEMA], [SUNDAY], as_json=True))
+    assert got["cinemas"][0]["films"] == []
+    missing = json.loads(await queries.film_showtimes(client, "zzzzzz", [CINEMA], [SUNDAY],
+                                                      as_json=True))
+    assert missing["film"] is None and missing["cinemas"] == [] and missing["also_found"] == []
+    where = json.loads(await queries.where(client, "zzzzzz", FOUR, WEEK, as_json=True))
+    assert where["film"] is None and where["mine"] == [] and where["elsewhere"] == []
+
+
+async def test_film_json_names_the_other_matches(client):
+    import json
+
+    got = json.loads(await queries.film_showtimes(client, "the", [CINEMA], [SUNDAY], as_json=True))
+    assert got["also_found"] and set(got["also_found"][0]) == {"title", "slug"}
+    assert all(list(day) == ["date", "film", "screenings"] for day in got["cinemas"][0]["days"])
+
+
+async def test_where_json(client):
+    import json
+
+    got = json.loads(await queries.where(client, "leviticus", FOUR, WEEK, as_json=True))
+    assert got["cinema_count"] == 9 and got["total_cinemas"] == 31
+    assert [c["slug"] for c in got["mine"]] == ["pathe-tilburg-stappegoor"]
+    assert got["missing"] == FOUR[:3]
+    assert len(got["elsewhere"]) == 8 and got["elsewhere"][0]["dates"]
+
+
+async def test_upcoming_search_and_cinemas_json(client):
+    import json
+
+    upcoming = json.loads(await queries.upcoming(client, limit=3, as_json=True))
+    assert upcoming["total"] == 177 and len(upcoming["films"]) == 3
+    assert list(upcoming["films"][0]) == FILM_KEYS
+    search = json.loads(await queries.find_film(client, "spider-man", as_json=True))
+    assert search["films"][0]["slug"] == "spider-man-brand-new-day-48103"
+    cinemas = json.loads(await queries.list_cinemas(client, as_json=True))
+    assert len(cinemas["cinemas"]) == 31
+    assert list(cinemas["cinemas"][0]) == ["slug", "name", "city", "formats"]
+
+
+# ------------------------------------------------------------- links and times
+
+async def test_links_put_the_booking_url_on_each_row(client):
+    out = await queries.programme(client, [CINEMA], SUNDAY, links=True)
+    rows = [line for line in out.splitlines() if line.startswith("  ")]
+    assert rows and all(row.split()[-1].startswith("https://s.pathe.nl/") for row in rows)
+    assert "https://" not in await queries.programme(client, [CINEMA], SUNDAY)
+
+
+async def test_the_time_window_drops_and_reports(client):
+    import datetime as dt
+
+    out = await queries.programme(client, [CINEMA], SUNDAY, starts_after=dt.timedelta(hours=19))
+    assert "10:30–" not in out and "21:15–" in out
+    assert "14 voorstellingen buiten het tijdvenster" in out
+    assert "**By Any Means**" not in out, "a film with nothing left in the window disappears"
+
+
+async def test_no_time_window_changes_nothing(client):
+    """The defaults filter nothing, so the note has no window count and the
+    output is the one without the arguments."""
+    plain = await queries.programme(client, [CINEMA], SUNDAY)
+    assert plain == await queries.programme(client, [CINEMA], SUNDAY,
+                                            starts_after=None, ends_before=None)
+    assert "tijdvenster" not in plain
+
+
+async def test_film_applies_the_time_window_though_it_does_not_filter_titles(client):
+    import datetime as dt
+
+    out = await queries.film_showtimes(client, "pressure", [CINEMA], [SUNDAY, MONDAY],
+                                       starts_after=dt.timedelta(hours=18),
+                                       ends_before=dt.timedelta(hours=23))
+    assert "21:00–23:00" in out and "20:30–22:30" in out
+    assert "10:30–" not in out
+    assert "_gefilterd: 3 voorstellingen buiten het tijdvenster_" in out
+
+
+async def test_tagged_takes_links_and_the_window(client):
+    import datetime as dt
+
+    out = await queries.tagged(client, "in-the-picture", [CINEMA], [SUNDAY, MONDAY], links=True,
+                               ends_before=dt.timedelta(hours=21))
+    assert "Fuori" in out and "https://s.pathe.nl/" in out
+    assert "Primavera" not in out, "19:00-21:10 ends after 21:00"
+
+
+# ------------------------------------------------------------------------- new
+
+async def test_new_lists_only_the_titles_pathe_flags_new(client):
+    out = await queries.new(client, [CINEMA], [SUNDAY, MONDAY])
+    assert out.startswith("## Nieuw — Pathé Helmond")
+    assert "— By Any Means" in out and "— F*ck de Familie" in out
+    assert "Spider-Man" not in out
+
+
+async def test_new_filters_kids_by_default(client):
+    out = await queries.new(client, [CINEMA], [SUNDAY, MONDAY])
+    assert "gefilterd: 1 kinderfilm (Bumba: Het Circusorkest)" in out
+    everything = await queries.new(client, [CINEMA], [SUNDAY, MONDAY], include_kids=True)
+    assert "— Bumba: Het Circusorkest" in everything
+
+
+async def test_new_json(client):
+    import json
+
+    got = json.loads(await queries.new(client, [CINEMA], [SUNDAY], as_json=True))
+    assert got["strand"] == "Nieuw"
+    assert {f["film"]["slug"] for f in got["cinemas"][0]["films"]} == {
+        "by-any-means-52350", "f-ck-de-familie-50315",
+    }
+
+
+# ------------------------------------------------------------------------ info
+
+class ShowClient(FakeClient):
+    """Serves one hand-made `/api/show` payload for whatever slug is asked."""
+
+    def __init__(self, payload):
+        super().__init__()
+        self.payload = payload
+
+    async def show(self, slug):
+        self.calls.append(f"show:{slug}")
+        return self.payload
+
+
+async def test_info_prints_the_details(client):
+    out = await queries.film_info(client, "spider-man")
+    assert out.startswith("# Spider-Man: Brand New Day\n145 min · -12 jaar")
+    assert "regie: Destin Daniel Cretton" in out
+    assert "met: Zendaya, Tom Holland," in out, "the stray space before the comma is gone"
+    assert "release: donderdag 30 juli 2026" in out
+    assert "kijkwijzer: Geweld, Angst, Grof taalgebruik" in out
+    assert "originele titel" not in out, "same as the title, so not repeated"
+    assert "Peter Parker" in out
+    assert "popcornbucket" not in out and "21448" not in out, "no extraInformation or counts"
+    assert "show:spider-man-brand-new-day-48103" in client.calls
+    assert not client.showtime_calls
+
+
+async def test_info_prefers_the_dutch_trailer(client):
+    out = await queries.film_info(client, "spider-man")
+    assert "trailer: https://" in out and "231766d4" in out, "the nl one, listed first"
+    swapped = load("show/spider-man-brand-new-day-48103.json")
+    swapped["trailers"].reverse()
+    assert "231766d4" in await queries.film_info(ShowClient(swapped), "spider-man")
+
+
+async def test_info_falls_back_to_the_first_trailer(client):
+    out = await queries.film_info(client, "leviticus")
+    assert "trailer: https://media.pathe.nl/trailer/video/nl/v/HO00003449/4e0ec758" in out
+
+
+async def test_info_strips_synopsis_markup_and_shows_a_different_original_title():
+    payload = {"synopsis": "<p>Een <em>held</em> &amp; zijn hond.</p>",
+               "originalTitle": "Brand New Day", "trailers": []}
+    out = await queries.film_info(ShowClient(payload), "spider-man")
+    assert "Een held & zijn hond." in out
+    assert "originele titel: Brand New Day" in out
+    assert "trailer:" not in out
+
+
+async def test_info_when_pathe_has_no_details():
+    """An unknown `/api/show` slug is a 404; the client hands back `[]`."""
+    out = await queries.film_info(ShowClient([]), "spider-man")
+    assert out.startswith("# Spider-Man: Brand New Day")
+    assert "_Pathé heeft geen details voor deze film._" in out
+
+
+async def test_info_on_an_unknown_title(client):
+    out = await queries.film_info(client, "zzzzzz")
+    assert "Zoeken: “zzzzzz”" in out
+    assert not [c for c in client.calls if c.startswith("show:")]
+
+
+async def test_info_json(client):
+    import json
+
+    spider = json.loads(await queries.film_info(client, "spider-man", as_json=True))
+    assert list(spider) == ["query", "film", "details", "also_found"]
+    assert list(spider["details"]) == ["cast", "original_title", "content_warnings", "synopsis",
+                                       "trailer_url"]
+    assert spider["details"]["content_warnings"] == ["Geweld", "Angst", "Grof taalgebruik"]
+    assert spider["details"]["original_title"] is None
+    other = json.loads(await queries.film_info(client, "the", as_json=True))
+    assert other["details"] is None, "no recorded /api/show for it: a 404"
+    assert other["also_found"]
+
+
+# ---------------------------------------------------------------------- cinema
+
+class CinemasClient(FakeClient):
+    def __init__(self, payload):
+        super().__init__()
+        self.payload = payload
+
+    async def cinemas(self):
+        return self.payload
+
+
+async def test_cinema_info_prints_the_practical_details(client):
+    out = await queries.cinema_info(client, CINEMA)
+    lines = out.splitlines()
+    assert lines[:3] == ["# Pathé Helmond", "Frans Joseph van Thielpark 5, 5707 BX Helmond",
+                         "6 zalen · 1075 stoelen"]
+    assert "kaart: https://maps.google.com/maps?cid=8794382929596725660" in out
+    assert "**Parkeren**" in out and "Tarief: € 2,50" in out and "<" not in out
+    assert "Welkom bij" not in out, "the marketing description is skipped"
+    assert client.calls == ["cinemas"], "no request beyond /api/cinemas"
+
+
+async def test_cinema_info_with_several_theaters_and_accessibility():
+    """hasPmrService is set here to show it stays out even when true."""
+    raw = {**load("cinemas.json")[0], "hasPmrService": True, "googleMyBusinessUrl": None}
+    raw["theaters"] = [
+        {"name": "Zaal Noord", "addressLine1": "Straat 1", "addressZip": "1000 AA",
+         "addressCity": "Stad"},
+        {"name": "Zaal Zuid", "addressLine1": "Laan 2", "addressLine2": "achterom",
+         "addressZip": "1000 AB", "addressCity": "Stad"},
+    ]
+    raw["services"] = [{"label": "Rolstoel", "description": "<p>Lift</p>", "isAccessibility": True}]
+    out = await queries.cinema_info(CinemasClient([raw]), raw["slug"])
+    assert "Zaal Noord: Straat 1, 1000 AA Stad" in out
+    assert "Zaal Zuid: Laan 2, achterom, 1000 AB Stad" in out
+    assert "PMR" not in out, "hasPmrService is false everywhere, so it is never shown"
+    assert "**Rolstoel**  ‹toegankelijkheid›\nLift" in out
+    assert "kaart:" not in out
+
+
+async def test_cinema_info_json(client):
+    import json
+
+    got = json.loads(await queries.cinema_info(client, CINEMA, as_json=True))
+    assert got["halls"] == 6 and got["seats"] == 1075
+    assert "pmr_service" not in got
+    assert got["addresses"][0]["postcode"] == "5707 BX"
+    assert [s["label"] for s in got["services"]] == ["Parkeren", "Ondersteuning", "Openingstijden"]
+    assert "<" not in got["services"][0]["description"]
